@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+  publish_unity-github:
+    name: publish-unity-github
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-make
+      - run: cargo make unity-build
+      - run: |
+          git fetch origin upm/latest:upm/latest
+          git config --global user.name 'github-bot'
+          git config --global user.email 'github-bot@users.noreply.github.com'
+          git mv unity/Assets/Samples unity/Assets/Samples~
+          rm -f unity/Assets/Scripts/Properties.meta
+          rm -f unity/Assets/Samples.meta
+          rm -f unity/Assets/DefaultVolumeProfile.*
+          rm -f unity/Assets/UniversalRenderPipelineAsset.*
+          rm -f unity/Assets/UniversalRenderPipelineAsset_Renderer.*
+          rm -f unity/Assets/UniversalRenderPipelineGlobalSettings.*
+          rm -rf tools .github
+          find ./ -name .gitignore -type f -delete
+          find ./ -name .npmignore -type f -delete
+          git add .
+          git commit -am "prepare for Unity Package Release"
+          git branch -D upm/latest
+          git subtree split -P unity/Assets -b upm/latest
+          git checkout upm/latest
+          git clean -fxd
+          git push -f -u origin upm/latest
+      - id: get_upm_tag
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            return 'upm/'+context.payload.ref.replace(/refs\/tags\//, '');
+      - run: |
+          git tag $TAG upm/latest
+          git push origin $TAG
+        env:
+          TAG: ${{ steps.get_upm_tag.outputs.result }}
+  
+  publish_nuget:
+    name: publish-nuget
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-make
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - id: get_version
+        run: echo "VERSION=$(echo $GITHUB_REF | cut -d / -f 3 | cut -d . -f 1,2,3)" >> $GITHUB_OUTPUT
+      - run: |
+          cargo make build
+          cd src/bin/Release
+          dotnet nuget push AUTD3Sharp.Link.EtherCrab.*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate --no-symbols

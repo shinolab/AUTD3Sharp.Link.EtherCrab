@@ -1,0 +1,6 @@
+[submodule "tools/wrapper-generator/autd3-capi-link-ethercrab"]
+	path = tools/wrapper-generator/autd3-capi-link-ethercrab
+	url = https://github.com/shinolab/autd3-capi-link-ethercrab.git
+[submodule "tools/wrapper-generator/autd3-link-ethercrab"]
+	path = tools/wrapper-generator/autd3-link-ethercrab
+	url = https://github.com/shinolab/autd3-rs.git
