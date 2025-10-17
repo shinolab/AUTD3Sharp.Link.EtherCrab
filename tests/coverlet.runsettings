@@ -4,7 +4,7 @@
     <DataCollectors>
       <DataCollector friendlyName="XPlat code coverage">
         <Configuration>
-          <Exclude></Exclude>
+          <Exclude>[*]AUTD3Sharp.Link.EtherCrab</Exclude>
         </Configuration>
       </DataCollector>
     </DataCollectors>
