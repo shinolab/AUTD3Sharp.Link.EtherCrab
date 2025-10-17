@@ -1,0 +1,19 @@
+{
+    "name": "autd3-link-ethercrab",
+    "rootNamespace": "",
+    "references": [
+        "GUID:783dc5ca1039b4d448d527bcf560b23e"
+    ],
+    "includePlatforms": [
+        "Editor",
+        "WindowsStandalone64"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
