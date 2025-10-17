@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <Platforms>AnyCPU</Platforms>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>37.0.0-alpha.3</Version>
+    <Authors>Shun Suzuki</Authors>
+    <Company>Shinolab</Company>
+    <Description>autd3-link-ethercrab library wrapper for .Net</Description>
+    <Copyright>Copyright (c) 2022-2025 Shun Suzuki. All rights reserved.</Copyright>
+    <PackageProjectUrl>https://github.com/shinolab/autd3</PackageProjectUrl>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput)</TargetsForTfmSpecificBuildOutput>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+      <None Include="LICENSE.txt" Pack="true" PackagePath="LICENSE.txt" />
+      <None Include="../README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AUTD3Sharp" Version="37.0.0-alpha.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="native\windows\x64\*.dll" 
+          Pack="true" 
+          PackagePath="runtimes\win-x64\native\" 
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="native\windows\x64\ThirdPartyNotices.txt" 
+          Pack="true" 
+          PackagePath="runtimes\win-x64\native\" />
+    <None Include="native\linux\x64\*.so" 
+          Pack="true" 
+          PackagePath="runtimes\linux-x64\native\" 
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="native\linux\x64\ThirdPartyNotices.txt" 
+          Pack="true" 
+          PackagePath="runtimes\linux-x64\native\" />
+    <None Include="native\osx\aarch64\*.dylib" 
+          Pack="true" 
+          PackagePath="runtimes\osx-arm64\native\" 
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="native\osx\aarch64\ThirdPartyNotices.txt" 
+          Pack="true" 
+          PackagePath="runtimes\osx-arm64\native\" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,469 @@
+[config]
+default_to_workspace = false
+skip_core_tasks = true
+
+[tasks.clean]
+ignore_errors = true
+script_runner = "@shell"
+script = '''
+rm -rf ./src/bin
+rm -rf ./src/obj
+rm -rf ./src/.vs
+rm -rf ./src/native
+rm -rf ./src/LICENSE.txt
+rm -rf ./tests/bin
+rm -rf ./tests/obj
+rm -rf ./tests/TestResults
+rm -rf ./tests/html
+rm -rf ./tests/.vs
+rm ./tests/*.dll
+rm ./tests/*.dylib
+rm ./tests/*.so
+rm -rf ./example/EtherCrab/bin
+rm -rf ./example/EtherCrab/obj
+rm -rf ./example/*/obj
+rm -rf ./example/.vs
+rm -rf ./unity/.vs
+rm -rf ./unity/Library
+rm -rf ./unity/Logs
+rm -rf ./unity/obj
+rm -rf ./unity/Packages
+rm -rf ./unity/ProjectSettings
+rm -rf ./unity/Samples~
+rm -rf ./unity/UserSettings
+rm -rf ./unity/Assets/LICENSE.md
+rm -rf ./unity/Assets/CHANGELOG.md
+rm ./unity/Assets/Plugins/**/*.dll
+rm ./unity/Assets/Plugins/**/*.dylib
+rm ./unity/Assets/Plugins/**/*.so
+rm ./VERSION
+rm ./UNITY_VERSION
+'''
+
+[tasks.build]
+dependencies = ["update-bin", "cs-src-build"]
+
+[tasks.format]
+dependencies = ["cs-src-format", "cs-tests-format", "cs-example-format"]
+
+[tasks.check]
+dependencies = ["build", "test", "cs-example-build"]
+
+[tasks.cs-src-format]
+cwd = "./src"
+command = "dotnet"
+args = ["format"]
+
+[tasks.cs-tests-format]
+cwd = "./tests"
+command = "dotnet"
+args = ["format"]
+
+[tasks.cs-example-format]
+dependencies = ["nuget-remove-tmp-src", "nuget-cache-clear", "nuget-add-tmp-src", "cs-example-format-main"]
+
+[tasks.cs-example-format-main]
+cwd = "./example"
+command = "dotnet"
+args = ["format"]
+
+[tasks.test]
+dependencies = ["update-bin", "cs-test"]
+
+[tasks.cs-src-build]
+cwd = "./src"
+command = "dotnet"
+args = ["build", "-c:Release"]
+
+[tasks.cs-example-build]
+dependencies = ["nuget-remove-tmp-src", "nuget-cache-clear", "nuget-add-tmp-src", "cs-example-build-main"]
+
+[tasks.cs-example-build-main]
+cwd = "./example"
+command = "dotnet"
+args = ["build", "-c:Release"]
+
+[tasks.nuget-add-tmp-src]
+ignore_errors = true
+command = "dotnet"
+args = ["nuget", "add", "source", "${CARGO_MAKE_WORKING_DIRECTORY}/src/bin/Release", "-n", "autd3sharp_ethercrab_local"]
+
+[tasks.nuget-remove-tmp-src]
+ignore_errors = true
+command = "dotnet"
+args = ["nuget", "remove", "source", "autd3sharp_ethercrab_local"]
+
+[tasks.nuget-cache-clear]
+ignore_errors = true
+command = "dotnet"
+args = ["nuget", "locals", "all", "-c"]
+
+[tasks.cs-test]
+cwd = "./tests"
+command = "dotnet"
+args = ["test"]
+
+[tasks.cov]
+dependencies = ["cs-cov-check-native-methods", "build", "cs-cov", "cs-cov-report"]
+
+[tasks.cs-cov]
+cwd = "./tests"
+command = "dotnet"
+args = ["test", '--collect:"XPlat Code Coverage"', "--settings", "coverlet.runsettings"]
+
+[tasks.cs-cov-report]
+cwd = "./tests"
+script_runner = "python"
+script_extension = "py"
+script = '''
+import sys
+import os
+import subprocess
+from pathlib import Path
+
+if len(sys.argv) > 1 and sys.argv[1] == "html":
+    cov_res = sorted(Path("TestResults").rglob("coverage.cobertura.xml"), key=os.path.getmtime, reverse=True)[0]
+    command = [
+        "reportgenerator",
+        f"-reports:{cov_res}",
+        "-targetdir:html",
+        "-reporttypes:Html",
+    ]
+    subprocess.run(command)
+'''
+
+[tasks.cs-cov-check-native-methods]
+script_runner = "python"
+script_extension = "py"
+script = '''
+import re
+import sys
+from pathlib import Path
+
+defined_methods = set()
+pattern = re.compile("\\s*internal static extern .* (AUTD.*?)\\(.*")
+for file in Path("src/NativeMethods").rglob("*.cs"):
+    with file.open() as f:
+        for line in f.readlines():
+            result = pattern.match(line)
+            if result:
+                defined_methods.add(result.group(1))
+print(defined_methods)
+used_methods = set()
+pattern = re.compile("NativeMethods.*?\\.(AUTD.*?)\\(")
+paths: set[Path] = set()
+paths |= set(Path("src").rglob("*.cs"))
+paths -= set(Path("src/NativeMethods").rglob("*.cs"))
+paths |= set(Path("tests").rglob("*.cs"))
+for file in paths:
+    with file.open(encoding="utf-8") as f:
+        for line in f.readlines():
+            result = pattern.findall(line)
+            if result:
+                for group in result:
+                    used_methods.add(group)
+unused_methods = defined_methods.symmetric_difference(used_methods)
+if len(unused_methods) != 0:
+    print("Following native methods are defined but not used.")
+    for method in unused_methods:
+        print(f"\t{method}")
+    sys.exit(-1)
+else:
+    print("All native methods are used.")
+'''
+
+[tasks.unity-build]
+dependencies = ["update-bin-unity", "unity-build-main"]
+
+[tasks.unity-build-main]
+script_runner = "python"
+script_extension = "py"
+script = '''
+import shutil
+import os
+import contextlib
+
+ignore = shutil.ignore_patterns("NativeMethods", ".vs", "bin", "obj")
+shutil.copytree(
+    "src",
+    "unity/Assets/Scripts",
+    dirs_exist_ok=True,
+    ignore=ignore,
+)
+os.remove("unity/Assets/Scripts/AUTD3Sharp.Link.EtherCrab.csproj")
+os.remove("unity/Assets/Scripts/.gitignore")
+with contextlib.suppress(FileNotFoundError):
+    os.remove("unity/Assets/Scripts/LICENSE.txt")
+with contextlib.suppress(FileNotFoundError):
+    shutil.rmtree("unity/Assets/Scripts/.vs")
+with contextlib.suppress(FileNotFoundError):
+    shutil.rmtree("unity/Assets/Scripts/build")
+with contextlib.suppress(FileNotFoundError):
+    shutil.rmtree("unity/Assets/Scripts/obj")
+with contextlib.suppress(FileNotFoundError):
+    shutil.rmtree("unity/Assets/Scripts/bin")
+with contextlib.suppress(FileNotFoundError):
+    shutil.rmtree("unity/Assets/Scripts/native")
+'''
+
+[tasks.generate-wrapper]
+dependencies = ["generate-wrapper-pre", "generate-wrapper-main"]
+
+[tasks.generate-wrapper-pre]
+command = "git"
+args = ["submodule", "update", "--init"]
+
+[tasks.generate-wrapper-main]
+cwd = "./tools/wrapper-generator"
+command = "cargo"
+args = ["r", "--release"]
+
+[tasks.update-bin]
+script = '''
+import platform
+import re
+import shutil
+import sys
+import tarfile
+import urllib.request
+from pathlib import Path
+import contextlib
+
+def download_and_extract(url: str, *dest_dirs: str) -> None:
+    tmp_file = Path("tmp.zip" if url.endswith(".zip") else "tmp.tar.gz")
+    urllib.request.urlretrieve(url, tmp_file)
+    if tmp_file.suffix == ".zip":
+        shutil.unpack_archive(tmp_file, ".")
+    else:
+        with tarfile.open(tmp_file, "r:gz") as tar:
+            tar.extractall(filter="fully_trusted")
+    tmp_file.unlink()
+    for dest_dir in dest_dirs:
+        Path(dest_dir).mkdir(parents=True, exist_ok=True)
+    for dll in Path("bin").glob("*.dll"):
+        for dest_dir in dest_dirs:
+            shutil.copy(dll, dest_dir)
+    for dylib in Path("bin").glob("*.dylib"):
+        for dest_dir in dest_dirs:
+            shutil.copy(dylib, dest_dir)
+    for so in Path("bin").glob("*.so"):
+        for dest_dir in dest_dirs:
+            shutil.copy(so, dest_dir)
+    shutil.rmtree("bin")
+    with contextlib.suppress(FileNotFoundError):
+        shutil.rmtree("lib")
+
+
+def should_update_dll(version: str) -> bool:
+    if platform.system() == "Windows":
+        if not Path("src/native/windows/x64/autd3capi_link_ethercrab.dll").is_file() or not Path("tests/autd3capi_link_ethercrab.dll").is_file():
+            return True
+    elif platform.system() == "Darwin":
+        if not Path("src/native/osx/universal/libautd3capi_link_ethercrab.dylib").is_file() or not Path("tests/libautd3capi_link_ethercrab.dylib").is_file():
+            return True
+    elif not Path("src/native/linux/x64/libautd3capi_link_ethercrab.so").is_file() or not Path("tests/libautd3capi_link_ethercrab.so").is_file():
+        return True
+
+    version_file = Path("VERSION")
+    if not version_file.exists():
+        return True
+
+    old_version = version_file.read_text().strip()
+    return old_version != version
+
+
+with Path("src/AUTD3Sharp.Link.EtherCrab.csproj").open() as f:
+    content = f.read()
+    version = re.search(r"<Version>(.*)</Version>", content).group(1).split(".")
+    version = (
+        ".".join(version[:4]) if version[2].endswith("alpha") or version[2].endswith("rc") else ".".join(version[:3])
+    )
+
+if not should_update_dll(version):
+    sys.exit(0)
+
+base_url = f"https://github.com/shinolab/autd3-capi-link-ethercrab/releases/download/v{version}"
+download_and_extract(
+    f"{base_url}/autd3-capi-link-ethercrab-v{version}-win-x64.zip",
+    "src/native/windows/x64",
+    "tests",
+)
+shutil.copyfile("ThirdPartyNotices.txt", "src/native/windows/x64/ThirdPartyNotices.txt")
+download_and_extract(
+    f"{base_url}/autd3-capi-link-ethercrab-v{version}-macos-aarch64.tar.gz",
+    "src/native/osx/aarch64",
+    "tests",
+)
+shutil.copyfile("ThirdPartyNotices.txt", "src/native/osx/aarch64/ThirdPartyNotices.txt")
+download_and_extract(
+    f"{base_url}/autd3-capi-link-ethercrab-v{version}-linux-x64.tar.gz",
+    "src/native/linux/x64",
+    "tests",
+)
+shutil.copyfile("ThirdPartyNotices.txt", "src/native/linux/x64/ThirdPartyNotices.txt")
+
+with Path("src/LICENSE.txt").open("w") as f:
+    f.write("# AUTD3Sharp.Link.EtherCrab License\n\n")
+    f.write(Path("LICENSE").read_text())
+    f.write("\n===\n\n")
+    f.write("## Third-Party Licenses\n\n")
+    f.write("""This package includes pre-compiled native binaries for different operating systems, which are licensed under their own separate terms.
+    
+The applicable license for each native binary is located alongside the binary within the NuGet package's `runtimes` directory.
+
+- Windows (`autd3_capi_link_ethercrab.dll`): See `runtimes/win-x64/native/ThirdPartyNotices.txt`.
+- Linux (`libautd3_capi_link_ethercrab.so`): See `runtimes/linux-x64/native/ThirdPartyNotices.txt`.
+- macOS (`libautd3_capi_link_ethercrab.dylib`): See `runtimes/osx-x64/native/ThirdPartyNotices.txt`.
+""")
+
+Path("VERSION").write_text(version)
+'''
+
+script_runner = "python"
+script_extension = "py"
+[tasks.update-bin-unity]
+script_runner = "python"
+script_extension = "py"
+script = '''
+import platform
+import re
+import shutil
+import sys
+import tarfile
+import urllib.request
+from pathlib import Path
+
+
+def download_and_extract(url: str, *dest_dirs: str) -> None:
+    tmp_file = Path("tmp.zip" if url.endswith(".zip") else "tmp.tar.gz")
+    urllib.request.urlretrieve(url, tmp_file)
+    if tmp_file.suffix == ".zip":
+        shutil.unpack_archive(tmp_file, ".")
+    else:
+        with tarfile.open(tmp_file, "r:gz") as tar:
+            tar.extractall(filter="fully_trusted")
+    tmp_file.unlink()
+    for dest_dir in dest_dirs:
+        Path(dest_dir).mkdir(parents=True, exist_ok=True)
+    for dll in Path("bin").glob("*.dll"):
+        for dest_dir in dest_dirs:
+            shutil.copy(dll, dest_dir)
+    for dylib in Path("bin").glob("*.dylib"):
+        for dest_dir in dest_dirs:
+            shutil.copy(dylib, dest_dir)
+    for so in Path("bin").glob("*.so"):
+        for dest_dir in dest_dirs:
+            shutil.copy(so, dest_dir)
+    shutil.rmtree("bin")
+
+
+def should_update_dll(version: str) -> bool:
+    if platform.system() == "Windows":
+        if not Path("unity/Assets/Plugins/x86_64/autd3capi_link_ethercrab.dll").is_file():
+            return True
+    elif platform.system() == "Darwin":
+        if not Path("unity/Assets/Plugins/x86_64/libautd3capi_link_ethercrab.dylib").is_file():
+            return True
+    elif not Path("unity/Assets/Plugins/x86_64/libautd3capi_link_ethercrab.so").is_file():
+        return True
+
+    version_file = Path("UNITY_VERSION")
+    if not version_file.exists():
+        return True
+
+    old_version = version_file.read_text().strip()
+    return old_version != version
+
+
+with Path("src/AUTD3Sharp.Link.EtherCrab.csproj").open() as f:
+    content = f.read()
+    version = re.search(r"<Version>(.*)</Version>", content).group(1).split(".")
+    version = (
+        ".".join(version[:4]) if version[2].endswith("alpha") or version[2].endswith("rc") else ".".join(version[:3])
+    )
+
+if not should_update_dll(version):
+    sys.exit(0)
+
+base_url = f"https://github.com/shinolab/autd3-capi-link-ethercrab/releases/download/v{version}"
+download_and_extract(
+    f"{base_url}/autd3-capi-link-ethercrab-v{version}-win-x64-unity.zip",
+    "unity/Assets/Plugins/x86_64"
+)
+shutil.copyfile("ThirdPartyNotices.txt", "unity/Assets/Plugins/x86_64/ThirdPartyNotices.Windows.txt")
+download_and_extract(
+    f"{base_url}/autd3-capi-link-ethercrab-v{version}-macos-aarch64-unity.tar.gz",
+    "unity/Assets/Plugins/aarch64",
+)
+shutil.copyfile("ThirdPartyNotices.txt", "unity/Assets/Plugins/aarch64/ThirdPartyNotices.osx.txt")
+download_and_extract(
+    f"{base_url}/autd3-capi-link-ethercrab-v{version}-linux-x64-unity.tar.gz",
+    "unity/Assets/Plugins/x86_64",
+)
+shutil.copyfile("ThirdPartyNotices.txt", "unity/Assets/Plugins/x86_64/ThirdPartyNotices.Linux.txt")
+with Path("unity/Assets/LICENSE.md").open("w") as f:
+    f.write("# AUTD3Sharp.Link.EtherCrab License\n\n")
+    f.write(Path("LICENSE").read_text())
+    f.write("\n\n")
+    f.write("## Third-Party Licenses\n\n")
+    f.write("""This package includes pre-compiled native binaries for different operating systems, which are licensed under their own separate terms.
+    
+The applicable license for each native binary is located alongside the binary within the `Assets/Plugins` directory.
+
+- Windows (`autd3_capi_link_ethercrab.dll`): See `Assets/Plugins/x86_64/ThirdPartyNotices.Windows.txt`.
+- Linux (`libautd3_capi_link_ethercrab.so`): See `Assets/Plugins/x86_64/ThirdPartyNotices.Linux.txt`.
+- macOS (`libautd3_capi_link_ethercrab.dylib`): See `Assets/Plugins/aarch64/ThirdPartyNotices.osx.txt`.
+""")
+shutil.copy("CHANGELOG.md", "unity/Assets/CHANGELOG.md")
+Path("UNITY_VERSION").write_text(version)
+'''
+
+[tasks.update-version]
+script_runner = "python"
+script_extension = "py"
+script = '''
+import sys
+import re
+from pathlib import Path
+
+version = sys.argv[1]
+
+def substitute_in_file(file: str, pattern: str, repl: str) -> None:
+    file = Path(file)
+    content = file.read_text(encoding="utf-8")
+    content = re.sub(pattern, repl, content, flags=re.MULTILINE)
+    file.write_text(content, encoding="utf-8")
+
+for proj in Path("example").rglob("*.csproj"):
+    substitute_in_file(
+        proj,
+        r'"AUTD3Sharp" Version="(.*)"',
+        f'"AUTD3Sharp" Version="{version}"',
+    )
+    substitute_in_file(
+        proj,
+        r'"AUTD3Sharp.Link.EtherCrab" Version="(.*)"',
+        f'"AUTD3Sharp.Link.EtherCrab" Version="{version}"',
+    )
+substitute_in_file(
+    "src/AUTD3Sharp.Link.EtherCrab.csproj",
+    r"<Version>(.*)</Version>",
+    f"<Version>{version}</Version>",
+)
+substitute_in_file(
+    "src/AUTD3Sharp.Link.EtherCrab.csproj",
+    r'"AUTD3Sharp" Version="(.*)"',
+    f'"AUTD3Sharp" Version="{version}"',
+)
+version_tokens = version.split(".")
+if "-" in version_tokens[2]:
+    version_tokens[2] = version_tokens[2].split("-")[0]
+    unity_version = ".".join(version_tokens[:3])
+else:
+    unity_version = version
+substitute_in_file(
+    "unity/Assets/package.json",
+    r'"version": "(.*)"',
+    f'"version": "{unity_version}"',
+)
+'''
