@@ -5,7 +5,7 @@
     <LangVersion>10.0</LangVersion>
     <Platforms>AnyCPU</Platforms>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>37.0.0-alpha.3</Version>
+    <Version>37.0.0</Version>
     <Authors>Shun Suzuki</Authors>
     <Company>Shinolab</Company>
     <Description>autd3-link-ethercrab library wrapper for .Net</Description>
@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AUTD3Sharp" Version="37.0.0-alpha.3" />
+    <PackageReference Include="AUTD3Sharp" Version="37.0.0" />
   </ItemGroup>
 
   <ItemGroup>
