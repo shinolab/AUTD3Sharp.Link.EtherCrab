@@ -1,0 +1,28 @@
+{
+    "name": "com.shinolab.autd3-link-ethercrab",
+    "displayName": "autd3-unity-link-ethercrab",
+    "description": "autd3-link-ethercrab library wrapper for Unity",
+    "version": "37.0.0",
+    "author": "Shun Suzuki",
+    "unity": "2021.3",
+    "keywords": [
+        "unity",
+        "autd3"
+    ],
+    "license": "MIT",
+    "homepage": "https://github.com/shinolab/autd3",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/shinolab/AUTD3Sharp.Link.EtherCrab.git"
+    },
+    "dependencies": {
+        "com.shinolab.autd3": "37.0.0"
+    },
+    "samples": [
+        {
+            "displayName": "Simple",
+            "description": "Sample to display the focus at target object",
+            "path": "Samples~/Simple"
+        }
+    ]
+}
