@@ -32,18 +32,15 @@ namespace AUTD3Sharp.Link
                 dc_configuration_sync0_period = Sync0Period,
                 state_check_period = StateCheckPeriod,
                 sync_tolerance = SyncTolerance,
-                sync_timeout = SyncTimeout,
+                sync_timeout = SyncTimeout
             };
-
+            if (Ifname is null) return option;
             unsafe
             {
-                if (Ifname is not null)
+                var ifnameBytes = Ffi.ToNullTerminatedUtf8(Ifname);
+                fixed (byte* pIfname = &ifnameBytes[0])
                 {
-                    var ifnameBytes = Ffi.ToNullTerminatedUtf8(Ifname);
-                    fixed (byte* pIfname = &ifnameBytes[0])
-                    {
-                        option.ifname = pIfname;
-                    }
+                    option.ifname = pIfname;
                 }
             }
             return option;
