@@ -4,7 +4,7 @@
 ![build](https://github.com/shinolab/AUTD3Sharp.Link.EtherCrab/workflows/build/badge.svg)
 [![codecov](https://codecov.io/gh/shinolab/AUTD3Sharp.Link.EtherCrab/graph/badge.svg?precision=2)](https://codecov.io/gh/shinolab/AUTD3Sharp.Link.EtherCrab)
 
-[autd3-link-ethercrab](https://github.com/shinolab/autd3-rs) wrapper library for .NET 8+.
+[autd3-link-ethercrab](https://github.com/shinolab/autd3-rs) wrapper library for .NET 10+.
 
 ## Install
 
