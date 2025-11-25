@@ -9,8 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AUTD3Sharp" Version="38.0.0" />
-    <PackageReference Include="AUTD3Sharp.Link.EtherCrab" Version="38.0.0" />
+    <PackageReference Include="AUTD3Sharp" Version="38.0.1" />
+    <PackageReference Include="AUTD3Sharp.Link.EtherCrab" Version="38.0.1" />
   </ItemGroup>
 
 </Project>
